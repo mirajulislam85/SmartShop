@@ -30,9 +30,11 @@ const dom = {};
 
 document.addEventListener("DOMContentLoaded", () => {
   cacheDom();
+  initializeBalance();
   bindEvents();
   initializeNavHighlight();
   initializeBanner();
+  initializeReviews();
   loadProducts();
   renderCart();
 });
@@ -46,6 +48,7 @@ function cacheDom() {
 
   dom.balanceHero = document.getElementById("balanceHero");
   dom.addMoneyBtn = document.getElementById("addMoneyBtn");
+  dom.addMoneyFooterBtn = document.getElementById("addMoneyFooterBtn");
   dom.cartTotalHero = document.getElementById("cartTotalHero");
 
   dom.cartCount = document.getElementById("cartCount");
@@ -76,6 +79,11 @@ function cacheDom() {
   dom.categoryFilters = document.getElementById("categoryFilters");
   dom.productGrid = document.getElementById("productGrid");
   dom.productStatus = document.getElementById("productStatus");
+
+  dom.reviewCard = document.getElementById("reviewCard");
+  dom.prevReviewBtn = document.getElementById("prevReviewBtn");
+  dom.nextReviewBtn = document.getElementById("nextReviewBtn");
+  dom.reviewDots = document.getElementById("reviewDots");
 }
 
 // Event wiring
@@ -89,6 +97,9 @@ function bindEvents() {
       dom.mobileMenu?.classList.add("hidden");
     });
   });
+
+  dom.addMoneyBtn?.addEventListener("click", addMoney);
+  dom.addMoneyFooterBtn?.addEventListener("click", addMoney);
 
   dom.openCartBtn?.addEventListener("click", openCart);
   dom.closeCartBtn?.addEventListener("click", closeCart);
@@ -105,6 +116,15 @@ function bindEvents() {
   dom.nextBannerBtn?.addEventListener("click", () => {
     setBannerSlide(state.bannerIndex + 1);
     restartBannerTimer();
+  });
+
+  dom.prevReviewBtn?.addEventListener("click", () => {
+    setReviewSlide(state.reviewIndex - 1);
+    restartReviewTimer();
+  });
+  dom.nextReviewBtn?.addEventListener("click", () => {
+    setReviewSlide(state.reviewIndex + 1);
+    restartReviewTimer();
   });
 
   dom.searchInput?.addEventListener("input", applySearchAndSort);
@@ -470,4 +490,76 @@ function handleCheckout() {
   renderCart();
   showToast("Checkout complete. Order placed.", "success");
   closeCart();
+}
+
+// Balance
+function initializeBalance() {
+  const raw = localStorage.getItem(config.balanceStorageKey);
+  const parsed = Number.parseInt(raw || "", 10);
+  state.balance = Number.isFinite(parsed) ? parsed : config.initialBalance;
+  saveBalance();
+  updateBalanceUI();
+}
+
+function saveBalance() {
+  localStorage.setItem(config.balanceStorageKey, String(state.balance));
+}
+
+function addMoney() {
+  state.balance += config.addMoneyAmount;
+  saveBalance();
+  updateBalanceUI();
+  showToast("Balance increased by 1000 BDT.", "success");
+}
+
+function updateBalanceUI() {
+  const value = String(state.balance);
+  dom.balanceHero.textContent = value;
+}
+
+// Reviews
+async function initializeReviews() {
+  try {
+    const response = await fetch(config.reviewsUrl);
+    if (!response.ok) {
+      throw new Error("Reviews request failed");
+    }
+    const data = await response.json();
+    state.reviews = Array.isArray(data) ? data : [];
+  } catch (error) {
+    state.reviews = [];
+  }
+
+  if (!state.reviews.length) {
+    dom.reviewCard.innerHTML = "<p class=\"text-sm text-slate-500\">No reviews available right now.</p>";
+    return;
+  }
+
+  createDots(dom.reviewDots, state.reviews.length, (index) => {
+    setReviewSlide(index);
+    restartReviewTimer();
+  });
+  setReviewSlide(0);
+  restartReviewTimer();
+}
+
+function setReviewSlide(index) {
+  state.reviewIndex = wrapIndex(index, state.reviews.length);
+  const review = state.reviews[state.reviewIndex];
+  dom.reviewCard.innerHTML = `
+    <p class="text-sm font-semibold text-slate-800">${escapeHtml(review.name)}</p>
+    <p class="mt-2 text-sm text-slate-600">${escapeHtml(review.comment)}</p>
+    <div class="mt-3 flex items-center justify-between text-xs text-slate-500">
+      <span class="text-amber-500">${renderStars(review.rating || 0)}</span>
+      <span>${escapeHtml(review.date || "")}</span>
+    </div>
+  `;
+  updateDots(dom.reviewDots, state.reviewIndex);
+}
+
+function restartReviewTimer() {
+  clearInterval(state.reviewTimer);
+  state.reviewTimer = setInterval(() => {
+    setReviewSlide(state.reviewIndex + 1);
+  }, config.reviewIntervalMs);
 }
