@@ -34,6 +34,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initializeNavHighlight();
   initializeBanner();
   loadProducts();
+  renderCart();
 });
 
 // DOM references
@@ -46,6 +47,24 @@ function cacheDom() {
   dom.balanceHero = document.getElementById("balanceHero");
   dom.addMoneyBtn = document.getElementById("addMoneyBtn");
   dom.cartTotalHero = document.getElementById("cartTotalHero");
+
+  dom.cartCount = document.getElementById("cartCount");
+  dom.cartBadge = document.getElementById("cartBadge");
+  dom.openCartBtn = document.getElementById("openCartBtn");
+  dom.closeCartBtn = document.getElementById("closeCartBtn");
+  dom.cartDrawer = document.getElementById("cartDrawer");
+  dom.cartOverlay = document.getElementById("cartOverlay");
+  dom.cartItems = document.getElementById("cartItems");
+  dom.cartEmpty = document.getElementById("cartEmpty");
+  dom.subtotalText = document.getElementById("subtotalText");
+  dom.deliveryText = document.getElementById("deliveryText");
+  dom.shippingText = document.getElementById("shippingText");
+  dom.discountText = document.getElementById("discountText");
+  dom.totalText = document.getElementById("totalText");
+  dom.checkoutBtn = document.getElementById("checkoutBtn");
+  dom.couponInput = document.getElementById("couponInput");
+  dom.applyCouponBtn = document.getElementById("applyCouponBtn");
+  dom.couponMessage = document.getElementById("couponMessage");
 
   dom.bannerSlides = Array.from(document.querySelectorAll(".banner-slide"));
   dom.prevBannerBtn = document.getElementById("prevBannerBtn");
@@ -70,6 +89,14 @@ function bindEvents() {
       dom.mobileMenu?.classList.add("hidden");
     });
   });
+
+  dom.openCartBtn?.addEventListener("click", openCart);
+  dom.closeCartBtn?.addEventListener("click", closeCart);
+  dom.cartOverlay?.addEventListener("click", closeCart);
+  dom.cartItems?.addEventListener("click", handleCartActions);
+
+  dom.applyCouponBtn?.addEventListener("click", applyCoupon);
+  dom.checkoutBtn?.addEventListener("click", handleCheckout);
 
   dom.prevBannerBtn?.addEventListener("click", () => {
     setBannerSlide(state.bannerIndex - 1);
@@ -263,4 +290,184 @@ function renderProducts() {
     card.append(imageWrap, title, price, ratingRow, addBtn);
     dom.productGrid.appendChild(card);
   });
+}
+
+// Cart logic
+function addToCart(productId) {
+  const product = state.products.find((item) => item.id === productId);
+  if (!product) return;
+
+  const nextCart = new Map(state.cart);
+  const existing = nextCart.get(productId);
+  nextCart.set(productId, {
+    id: product.id,
+    title: product.title,
+    image: product.image,
+    price: product.price,
+    qty: existing ? existing.qty + 1 : 1
+  });
+
+  const totals = calculateTotals(nextCart);
+  if (totals.total > state.balance) {
+    showToast("Insufficient balance. Add money to continue.", "error");
+    return;
+  }
+
+  state.cart = nextCart;
+  renderCart();
+  showToast("Item added to cart.", "success");
+}
+
+function handleCartActions(event) {
+  const btn = event.target.closest("button[data-action]");
+  if (!btn) return;
+  const id = Number(btn.dataset.id);
+  if (!id) return;
+
+  if (btn.dataset.action === "inc") {
+    addToCart(id);
+    return;
+  }
+
+  if (!state.cart.has(id)) return;
+  if (btn.dataset.action === "dec") {
+    const item = state.cart.get(id);
+    if (item.qty <= 1) {
+      state.cart.delete(id);
+    } else {
+      state.cart.set(id, { ...item, qty: item.qty - 1 });
+    }
+  }
+
+  if (btn.dataset.action === "remove") {
+    state.cart.delete(id);
+  }
+
+  renderCart();
+}
+
+function renderCart() {
+  dom.cartItems.innerHTML = "";
+  const entries = Array.from(state.cart.values());
+  dom.cartEmpty.classList.toggle("hidden", entries.length > 0);
+
+  entries.forEach((item) => {
+    const row = document.createElement("article");
+    row.className = "flex items-center gap-3 rounded-xl border border-slate-200 p-3";
+
+    const image = document.createElement("img");
+    image.src = item.image;
+    image.alt = item.title;
+    image.className = "h-14 w-14 rounded-lg bg-slate-50 object-contain p-1";
+
+    const info = document.createElement("div");
+    info.className = "min-w-0 flex-1";
+    info.innerHTML = `<p class="truncate text-sm font-semibold">${escapeHtml(item.title)}</p><p class="text-xs text-slate-500">${formatMoney(item.price)} BDT</p>`;
+
+    const controls = document.createElement("div");
+    controls.className = "flex items-center gap-1";
+    controls.innerHTML = `
+      <button type="button" data-action="dec" data-id="${item.id}" class="rounded-lg border border-slate-200 px-2 py-1 text-xs">-</button>
+      <span class="w-6 text-center text-xs font-semibold">${item.qty}</span>
+      <button type="button" data-action="inc" data-id="${item.id}" class="rounded-lg border border-slate-200 px-2 py-1 text-xs">+</button>
+      <button type="button" data-action="remove" data-id="${item.id}" class="ml-1 rounded-lg border border-rose-200 px-2 py-1 text-xs text-rose-500">x</button>
+    `;
+
+    row.append(image, info, controls);
+    dom.cartItems.appendChild(row);
+  });
+
+  const totals = calculateTotals(state.cart);
+  updateCartTotalsUI(totals);
+}
+
+function calculateTotals(cartMap) {
+  let subtotal = 0;
+  cartMap.forEach((item) => {
+    subtotal += item.price * item.qty;
+  });
+
+  const delivery = subtotal > 0 ? config.deliveryCharge : 0;
+  const shipping = subtotal > 0 ? config.shippingCost : 0;
+  const discount = state.couponApplied ? subtotal * config.couponRate : 0;
+  const total = subtotal + delivery + shipping - discount;
+
+  return { subtotal, delivery, shipping, discount, total };
+}
+
+function updateCartTotalsUI(totals) {
+  dom.subtotalText.textContent = `${formatMoney(totals.subtotal)} BDT`;
+  dom.deliveryText.textContent = `${formatMoney(totals.delivery)} BDT`;
+  dom.shippingText.textContent = `${formatMoney(totals.shipping)} BDT`;
+  dom.discountText.textContent = `${formatMoney(totals.discount)} BDT`;
+  dom.totalText.textContent = `${formatMoney(totals.total)} BDT`;
+  dom.cartTotalHero.textContent = formatMoney(totals.subtotal);
+
+  const qty = Array.from(state.cart.values()).reduce((sum, item) => sum + item.qty, 0);
+  dom.cartCount.textContent = qty;
+  dom.cartBadge?.classList.toggle("hidden", qty === 0);
+  dom.cartBadge?.classList.toggle("flex", qty > 0);
+}
+
+function applyCoupon() {
+  const code = (dom.couponInput.value || "").trim().toUpperCase();
+  if (!code) {
+    state.couponApplied = false;
+    setCouponMessage("Coupon removed.", true);
+    renderCart();
+    return;
+  }
+
+  if (code !== config.couponCode) {
+    state.couponApplied = false;
+    setCouponMessage("Invalid coupon code.", false);
+    renderCart();
+    return;
+  }
+
+  state.couponApplied = true;
+  setCouponMessage("SMART10 applied. 10 percent discount added.", true);
+  renderCart();
+}
+
+function setCouponMessage(message, ok) {
+  dom.couponMessage.textContent = message;
+  dom.couponMessage.className = `mt-2 text-xs ${ok ? "text-emerald-500" : "text-rose-500"}`;
+}
+
+function openCart() {
+  dom.cartDrawer.classList.remove("translate-x-full");
+  dom.cartOverlay.classList.remove("pointer-events-none", "opacity-0");
+  dom.cartOverlay.classList.add("opacity-100");
+}
+
+function closeCart() {
+  dom.cartDrawer.classList.add("translate-x-full");
+  dom.cartOverlay.classList.add("pointer-events-none", "opacity-0");
+  dom.cartOverlay.classList.remove("opacity-100");
+}
+
+function handleCheckout() {
+  const totals = calculateTotals(state.cart);
+  if (totals.total <= 0) {
+    showToast("Your cart is empty.", "error");
+    return;
+  }
+
+  if (totals.total > state.balance) {
+    showToast("Total exceeds balance. Add money first.", "error");
+    return;
+  }
+
+  state.balance -= Math.round(totals.total);
+  saveBalance();
+  updateBalanceUI();
+
+  state.cart.clear();
+  state.couponApplied = false;
+  dom.couponInput.value = "";
+  setCouponMessage("", true);
+  renderCart();
+  showToast("Checkout complete. Order placed.", "success");
+  closeCart();
 }

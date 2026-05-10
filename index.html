@@ -164,5 +164,28 @@
       </section>
     </main>
   </div>
+
+  <div id="cartOverlay" class="pointer-events-none fixed inset-0 z-40 bg-slate-950/40 opacity-0 transition-all duration-300"></div>
+  <aside id="cartDrawer" class="fixed right-0 top-0 z-50 h-full w-full max-w-md translate-x-full overflow-y-auto border-l border-slate-200 bg-white p-5 transition-all duration-300" aria-label="Shopping cart">
+    <div class="mb-5 flex items-center justify-between">
+      <h2 class="text-lg font-bold">Your Cart</h2>
+      <button id="closeCartBtn" type="button" class="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700">Close</button>
+    </div>
+    <div id="cartItems" class="space-y-4"></div>
+    <p id="cartEmpty" class="text-sm text-slate-600">Your cart is empty.</p>
+    <div class="mt-5 space-y-2 rounded-xl bg-slate-50 p-4 text-sm">
+      <div class="flex items-center justify-between"><span>Subtotal</span><span id="subtotalText">0 BDT</span></div>
+      <div class="flex items-center justify-between"><span>Delivery</span><span id="deliveryText">0 BDT</span></div>
+      <div class="flex items-center justify-between"><span>Shipping</span><span id="shippingText">0 BDT</span></div>
+      <div class="flex items-center justify-between"><span>Discount</span><span id="discountText">0 BDT</span></div>
+      <div class="flex items-center justify-between border-t border-slate-200 pt-2 text-base font-bold"><span>Total</span><span id="totalText">0 BDT</span></div>
+    </div>
+    <div class="mt-4 flex gap-2">
+      <input id="couponInput" type="text" placeholder="Coupon code" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none transition-all duration-300 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200">
+      <button id="applyCouponBtn" type="button" class="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-all duration-300 hover:bg-slate-800">Apply</button>
+    </div>
+    <p id="couponMessage" class="mt-2 text-xs"></p>
+    <button id="checkoutBtn" type="button" class="mt-4 w-full rounded-xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-emerald-600 hover:shadow-sm">Checkout</button>
+  </aside>
 </body>
 </html>
