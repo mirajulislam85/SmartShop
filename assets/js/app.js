@@ -84,6 +84,16 @@ function cacheDom() {
   dom.prevReviewBtn = document.getElementById("prevReviewBtn");
   dom.nextReviewBtn = document.getElementById("nextReviewBtn");
   dom.reviewDots = document.getElementById("reviewDots");
+
+  dom.contactForm = document.getElementById("contactForm");
+  dom.contactName = document.getElementById("contactName");
+  dom.contactEmail = document.getElementById("contactEmail");
+  dom.contactMessageInput = document.getElementById("contactMessageInput");
+  dom.contactMessage = document.getElementById("contactMessage");
+
+  dom.newsletterForm = document.getElementById("newsletterForm");
+  dom.newsletterEmail = document.getElementById("newsletterEmail");
+  dom.newsletterMessage = document.getElementById("newsletterMessage");
 }
 
 // Event wiring
@@ -126,6 +136,9 @@ function bindEvents() {
     setReviewSlide(state.reviewIndex + 1);
     restartReviewTimer();
   });
+
+  dom.contactForm?.addEventListener("submit", handleContactSubmit);
+  dom.newsletterForm?.addEventListener("submit", handleNewsletterSubmit);
 
   dom.searchInput?.addEventListener("input", applySearchAndSort);
   dom.sortSelect?.addEventListener("change", applySearchAndSort);
@@ -562,4 +575,53 @@ function restartReviewTimer() {
   state.reviewTimer = setInterval(() => {
     setReviewSlide(state.reviewIndex + 1);
   }, config.reviewIntervalMs);
+}
+
+// Contact form
+function handleContactSubmit(event) {
+  event.preventDefault();
+  const name = dom.contactName.value.trim();
+  const email = dom.contactEmail.value.trim();
+  const message = dom.contactMessageInput.value.trim();
+
+  if (!name || !email || !message) {
+    setContactMessage("Please fill all fields.", false);
+    return;
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    setContactMessage("Please provide a valid email.", false);
+    return;
+  }
+
+  setContactMessage("Thank you. Your message has been sent.", true);
+  dom.contactForm.reset();
+}
+
+function setContactMessage(text, success) {
+  dom.contactMessage.textContent = text;
+  dom.contactMessage.className = `text-sm ${success ? "text-emerald-500" : "text-rose-500"}`;
+}
+
+function handleNewsletterSubmit(event) {
+  event.preventDefault();
+  const email = dom.newsletterEmail.value.trim();
+
+  if (!email) {
+    setNewsletterMessage("Please enter your email.", false);
+    return;
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    setNewsletterMessage("Please provide a valid email.", false);
+    return;
+  }
+
+  setNewsletterMessage("Thanks for subscribing.", true);
+  dom.newsletterForm.reset();
+}
+
+function setNewsletterMessage(text, success) {
+  dom.newsletterMessage.textContent = text;
+  dom.newsletterMessage.className = `text-sm ${success ? "text-emerald-500" : "text-rose-500"}`;
 }
