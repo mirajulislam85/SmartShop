@@ -49,10 +49,10 @@ function cacheDom() {
   dom.balanceHero = document.getElementById("balanceHero");
   dom.addMoneyBtn = document.getElementById("addMoneyBtn");
   dom.addMoneyFooterBtn = document.getElementById("addMoneyFooterBtn");
-  dom.cartTotalHero = document.getElementById("cartTotalHero");
 
   dom.cartCount = document.getElementById("cartCount");
   dom.cartBadge = document.getElementById("cartBadge");
+  dom.cartTotalHero = document.getElementById("cartTotalHero");
   dom.openCartBtn = document.getElementById("openCartBtn");
   dom.closeCartBtn = document.getElementById("closeCartBtn");
   dom.cartDrawer = document.getElementById("cartDrawer");
@@ -94,6 +94,9 @@ function cacheDom() {
   dom.newsletterForm = document.getElementById("newsletterForm");
   dom.newsletterEmail = document.getElementById("newsletterEmail");
   dom.newsletterMessage = document.getElementById("newsletterMessage");
+
+  dom.toast = document.getElementById("toast");
+  dom.backToTop = document.getElementById("backToTop");
 }
 
 // Event wiring
@@ -115,6 +118,10 @@ function bindEvents() {
   dom.closeCartBtn?.addEventListener("click", closeCart);
   dom.cartOverlay?.addEventListener("click", closeCart);
   dom.cartItems?.addEventListener("click", handleCartActions);
+
+  dom.searchInput?.addEventListener("input", applySearchAndSort);
+  dom.sortSelect?.addEventListener("change", applySearchAndSort);
+  dom.categoryFilters?.addEventListener("click", handleCategoryFilterClick);
 
   dom.applyCouponBtn?.addEventListener("click", applyCoupon);
   dom.checkoutBtn?.addEventListener("click", handleCheckout);
@@ -139,10 +146,9 @@ function bindEvents() {
 
   dom.contactForm?.addEventListener("submit", handleContactSubmit);
   dom.newsletterForm?.addEventListener("submit", handleNewsletterSubmit);
-
-  dom.searchInput?.addEventListener("input", applySearchAndSort);
-  dom.sortSelect?.addEventListener("change", applySearchAndSort);
-  dom.categoryFilters?.addEventListener("click", handleCategoryFilterClick);
+  dom.backToTop?.addEventListener("click", () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
 }
 
 // Navigation active state
@@ -624,4 +630,58 @@ function handleNewsletterSubmit(event) {
 function setNewsletterMessage(text, success) {
   dom.newsletterMessage.textContent = text;
   dom.newsletterMessage.className = `text-sm ${success ? "text-emerald-500" : "text-rose-500"}`;
+}
+
+// Shared helpers
+function showToast(message, type) {
+  dom.toast.textContent = message;
+  dom.toast.classList.remove("opacity-0", "translate-x-8", "bg-slate-900", "bg-rose-600", "bg-emerald-600", "dark:bg-slate-100");
+  dom.toast.classList.add("opacity-100", "translate-x-0", type === "error" ? "bg-rose-600" : "bg-emerald-600");
+  setTimeout(() => {
+    dom.toast.classList.remove("opacity-100", "translate-x-0");
+    dom.toast.classList.add("opacity-0", "translate-x-8", "bg-slate-900");
+  }, 2200);
+}
+
+function createDots(container, count, onClick) {
+  if (!container) return;
+  container.innerHTML = "";
+  for (let i = 0; i < count; i += 1) {
+    const dot = document.createElement("button");
+    dot.type = "button";
+    dot.className = "h-2.5 w-2.5 rounded-full bg-slate-300 transition-all duration-300";
+    dot.addEventListener("click", () => onClick(i));
+    container.appendChild(dot);
+  }
+}
+
+function updateDots(container, activeIndex) {
+  if (!container) return;
+  const dots = Array.from(container.querySelectorAll("button"));
+  dots.forEach((dot, index) => {
+    dot.classList.toggle("bg-emerald-500", index === activeIndex);
+    dot.classList.toggle("bg-slate-300", index !== activeIndex);
+  });
+}
+
+function renderStars(rate) {
+  const rounded = Math.round(rate);
+  return "★★★★★".slice(0, rounded).padEnd(5, "☆");
+}
+
+function formatMoney(value) {
+  return Math.round(value).toLocaleString("en-BD");
+}
+
+function wrapIndex(index, length) {
+  return (index + length) % length;
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
