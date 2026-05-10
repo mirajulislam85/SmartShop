@@ -32,6 +32,7 @@ document.addEventListener("DOMContentLoaded", () => {
   cacheDom();
   bindEvents();
   initializeNavHighlight();
+  initializeBanner();
 });
 
 // DOM references
@@ -44,6 +45,11 @@ function cacheDom() {
   dom.balanceHero = document.getElementById("balanceHero");
   dom.addMoneyBtn = document.getElementById("addMoneyBtn");
   dom.cartTotalHero = document.getElementById("cartTotalHero");
+
+  dom.bannerSlides = Array.from(document.querySelectorAll(".banner-slide"));
+  dom.prevBannerBtn = document.getElementById("prevBannerBtn");
+  dom.nextBannerBtn = document.getElementById("nextBannerBtn");
+  dom.bannerDots = document.getElementById("bannerDots");
 }
 
 // Event wiring
@@ -56,6 +62,15 @@ function bindEvents() {
     link.addEventListener("click", () => {
       dom.mobileMenu?.classList.add("hidden");
     });
+  });
+
+  dom.prevBannerBtn?.addEventListener("click", () => {
+    setBannerSlide(state.bannerIndex - 1);
+    restartBannerTimer();
+  });
+  dom.nextBannerBtn?.addEventListener("click", () => {
+    setBannerSlide(state.bannerIndex + 1);
+    restartBannerTimer();
   });
 }
 
@@ -93,4 +108,33 @@ function initializeNavHighlight() {
   );
 
   dom.sections.forEach((section) => observer.observe(section));
+}
+
+// Banner slider
+function initializeBanner() {
+  if (!dom.bannerSlides.length) return;
+  createDots(dom.bannerDots, dom.bannerSlides.length, (index) => {
+    setBannerSlide(index);
+    restartBannerTimer();
+  });
+  setBannerSlide(0);
+  restartBannerTimer();
+}
+
+function setBannerSlide(index) {
+  state.bannerIndex = wrapIndex(index, dom.bannerSlides.length);
+  dom.bannerSlides.forEach((slide, idx) => {
+    const active = idx === state.bannerIndex;
+    slide.classList.toggle("opacity-100", active);
+    slide.classList.toggle("opacity-0", !active);
+    slide.setAttribute("aria-hidden", active ? "false" : "true");
+  });
+  updateDots(dom.bannerDots, state.bannerIndex);
+}
+
+function restartBannerTimer() {
+  clearInterval(state.bannerTimer);
+  state.bannerTimer = setInterval(() => {
+    setBannerSlide(state.bannerIndex + 1);
+  }, config.bannerIntervalMs);
 }
